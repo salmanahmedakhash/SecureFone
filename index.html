@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> 
+    <title>SecureFone - Dynamic News Blog</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400;1,700;0,500;0,500&family=Noto+Sans+Bengali:wght@100..900&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        /* ফন্ট-ফ্যামিলি পরিবর্তন */
+        :root { 
+            --brand-blue: #0000FF; 
+            --text-dark: #1a1a1a; 
+            --text-secondary: #555; 
+            --background-light-gray: #f8f9fa; 
+        }
+        
+        /* Body-র ডিফল্ট ফন্ট: Content-এর জন্য Merriweather ব্যবহার করা হয়েছে */
+        body { 
+            font-family: 'Merriweather', 'Noto Sans Bengali', serif; 
+            background-color: #ffffff; 
+            color: var(--text-dark); 
+        }
+
+        /* হেডার ও টাইটেলগুলির জন্য Poppins ব্যবহার করা হয়েছে */
+        .navbar-brand, 
+        .post-title, 
+        .single-post-title, 
+        .author-name, 
+        h1, h2, h3, h4, h5, h6,
+        .my-5 h2,
+        .card-title { /* Card Title-ও Poppins-এ আনা হলো */
+            font-family: 'Poppins', 'Noto Sans Bengali', sans-serif; 
+            font-weight: 600;
+        }
+        
+        .navbar { background-color: #ffffff; border-bottom: 1px solid #f0f0f0; padding: 1rem 0; }
+        .navbar-brand { font-weight: 700; font-size: 1.8rem; color: var(--text-dark) !important; cursor: pointer; }
+        .navbar-toggler:focus { box-shadow: none; }
+        .navbar-toggler .line { display: block; width: 25px; height: 2px; background-color: var(--text-dark); margin: 5px 0; transition: all 0.2s; }
+        .blog-post { margin-bottom: 2.5rem; padding-bottom: 2.5rem; border-bottom: 8px solid var(--background-light-gray); }
+        
+        /* Poppins: আধুনিক, শক্তিশালী হেডিং ফন্ট - সাইজ অ্যাডজাস্টমেন্ট */
+        .post-title { 
+            font-size: 2.1rem; /* একটু বড় করা হলো */
+            font-weight: 700; 
+            line-height: 1.3; 
+        }
+        .post-title a { text-decoration: none; color: inherit; cursor: pointer; }
+        .post-title a:hover { color: var(--brand-blue); }
+        .post-meta { color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 0.25rem; }
+        .post-meta a { color: var(--brand-blue); text-decoration: none; font-weight: 500; cursor: pointer; }
+        
+        /* Merriweather: ক্লাসিক, হালকা মোটা কন্টেন্ট ফন্ট (আপডেট) */
+        .post-excerpt { 
+            font-size: 1.1rem; 
+            line-height: 1.8;
+            color: #333; 
+            font-weight: 400; /* ৫০০ থেকে ৪০০-তে নামানো হলো, যা Merriweather-এর রেগুলার ফন্ট ওয়েট */
+        }
+        .category-tag { display: inline-flex; align-items: center; gap: 0.6rem; margin-top: 1rem; }
+        .sidebar { padding-left: 2rem; }
+        
+        /* Poppins: সিঙ্গেল পোস্ট টাইটেল */
+        .single-post-title { 
+            font-size: 2.5rem; /* আরেকটু বড় করা হলো */
+            font-weight: 700; 
+            line-height: 1.2; 
+            margin-bottom: 1rem; 
+        }
+        
+        /* Merriweather: পোস্ট কন্টেন্ট (আপডেট) */
+        .post-content-body p { 
+            font-size: 1.1rem; 
+            line-height: 1.8;
+            margin-bottom: 1.2rem; /* মার্জিন বাড়ানো হলো */
+            color: #333; 
+            font-weight: 400; /* Merriweather-এর রেগুলার ফন্ট ওয়েট */
+        }
+        
+        .author-box { background-color: var(--background-light-gray); padding: 1.5rem; margin-bottom: 2.5rem; display: flex; align-items: center; }
+        .author-avatar { width: 90px; height: 90px; overflow: hidden; border-radius: 50%; flex-shrink: 0; } /* সাইজ বাড়ানো হলো */
+        .author-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        /* Poppins: লেখকের নাম */
+        .author-name { font-size: 1.6rem; font-weight: 700; margin-left: 1rem; margin-bottom: 0; }
+        
+        .also-read-box { border: 1px dashed #e67e22; background-color: #fef5e7; padding: 0.5rem 0.75rem; margin: 1.5rem 0; border-radius: 6px; }
+        .also-read-box .also-read-title { font-size: 0.8rem; font-weight: 700; color: #d35400; margin-bottom: 0.4rem; display: block; }
+        .also-read-box a { text-decoration: none; color: var(--text-dark); font-weight: 600; font-size: 0.9rem; line-height: 1.4; cursor: pointer; } /* ফন্ট সাইজ বাড়ানো হলো */
+        .also-read-box img { width: 70px; height: 50px; object-fit: cover; } /* সাইজ বাড়ানো হলো */
+        .loading-indicator { font-size: 1.1rem; text-align: center; padding: 30px 0; color: #6c757d; }
+
+        /* ** সাইডবার Recent পোস্ট লিস্টের জন্য (Fixed/Increased Size) ** */
+        .sidebar-widget #recent-posts-list img {
+            width: 70px; /* সাইজ বাড়ানো হলো */
+            height: 50px; /* সাইজ বাড়ানো হলো */
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .sidebar-widget #recent-posts-list a {
+            font-size: 0.95rem; /* সাইজ সামান্য বাড়ানো হলো */
+            line-height: 1.4;
+            font-weight: 500;
+            color: var(--text-dark);
+            text-decoration: none;
+        }
+        .sidebar-widget #recent-posts-list .recent-post-item {
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+        .recent-post-item .card-title a:hover { color: var(--brand-blue) !important; }
+
+        /* More Stories You Might Like (Cards) - সাইজ ঠিক করা */
+        #recent-posts-cards .card-img-top {
+            height: 150px !important; /* ইমেজ হাইট বাড়ানো হলো */
+        }
+        #recent-posts-cards .card-title a {
+            font-size: 1.1rem !important; /* কার্ড টাইটেল সাইজ বাড়ানো হলো */
+            line-height: 1.3;
+        }
+        #recent-posts-cards .recent-post-item .card-body {
+            padding: 1rem !important;
+        }
+
+        h4 { font-family: 'Poppins', 'Noto Sans Bengali', sans-serif; font-weight: 600; font-size: 1.4rem; }
+        .my-5 h2 { font-weight: 700 !important; font-size: 2rem; }
+        
+
+        /* মোবাইলের জন্য মিডিয়া কোয়েরি ফন্ট আপডেট করা হয়েছে (গুরুত্বপূর্ণ পরিবর্তন) */
+        @media (max-width: 991.98px) { 
+            .sidebar { padding-left: 0; margin-top: 3rem; }
+            .content-wrapper { padding-left: 15px; padding-right: 15px; }
+            .navbar-brand { font-size: 1.6rem; }
+            .post-title { font-size: 1.7rem; }
+            .single-post-title { font-size: 2rem; }
+
+            /* কন্টেন্ট ফন্ট সাইজ এবং ওয়েট */
+            .post-excerpt, .post-content-body p { 
+                font-size: 1.05rem; /* সামান্য বড় করা হলো */
+                font-weight: 400; 
+                line-height: 1.7;
+            }
+            .author-box { flex-direction: column; text-align: center; }
+            .author-avatar { margin-right: 0; margin-bottom: 1rem; }
+            .author-name { margin-left: 0; margin-top: 0.5rem; }
+            footer { padding-top: 2rem; padding-bottom: 2rem; }
+            
+            /* ** আপডেট করা CSS: Recent Posts Cards-এর সাইজ ঠিক করা ** */
+            #recent-posts-cards .card-img-top { 
+                height: 150px !important; /* মোবাইলেও হাইট একই রাখা হলো */
+            }
+            #recent-posts-cards .card-title a { 
+                font-size: 1rem !important; /* মোবাইলের জন্য ঠিকঠাক সাইজ */
+            }
+            .recent-post-item .card-body {
+                padding: 0.8rem !important;
+            }
+            .recent-post-item .card-text small {
+                font-size: 0.75rem; /* সামান্য বড় করা হলো */
+            }
+
+            .my-5 h2 { font-size: 1.6rem; }
+            h4 { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body class="bg-white">
+    <header class="sticky-top">
+        <nav class="navbar navbar-expand-lg">
+            <div class="container">
+                <a class="navbar-brand" id="home-nav-link" href="#" onclick="showPage('home-page', event)">SecureFone</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a class="nav-link active" id="nav-home" href="#" onclick="showPage('home-page', event)">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#">Technologies</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container content-wrapper">
+        
+        <div id="home-page" class="page-content">
+            <div class="row">
+                <div class="col-lg-8" id="posts-container">
+                    <div class="loading-indicator">Loading news from the database...</div>
+                </div>
+                
+                <div class="col-lg-4 sidebar">
+                    <div class="sidebar-widget mb-4">
+                        <h4>Search</h4>
+                        <form class="d-flex"><input class="form-control me-2" type="search" placeholder="Search"><button class="btn btn-dark" type="submit">Search</button></form>
+                    </div>
+                    <div class="sidebar-widget">
+                        <h4>Recent Posts</h4>
+                        <ul class="list-unstyled" id="recent-posts-list">
+                            <li class="text-muted">Loading...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="author-page" class="page-content" style="display: none;">
+            <div id="author-box-content"></div>
+            <div id="author-posts"></div>
+        </div>
+
+        <div id="post-detail-page" class="page-content" style="display: none;">
+            <div id="post-detail-content"></div>
+            
+            <div class="container my-5">
+                <h2 class="text-center mb-4" style="font-weight: 700;">More Stories You Might Like</h2>
+                <div id="recent-posts-cards" class="row">
+                    <div class="col-12 text-center text-muted py-5">Loading related posts...</div>
+                </div>
+            </div>
+            </div>
+    </main>
+
+    <footer class="text-center py-4 mt-3 bg-light">
+        <p class="mb-0 text-secondary" style="font-size: 0.85rem;">&copy; 2025 SecureFone. All Rights Reserved.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // --- FIREBASE CONFIGURATION (Replace with your actual keys) ---
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyD-nSUiQ26QLP8ULZxwIRYgE3f8ERCvqow",
+  authDomain: "brother-6679a.firebaseapp.com",
+  projectId: "brother-6679a",
+  storageBucket: "brother-6679a.firebasestorage.app",
+  messagingSenderId: "56634950796",
+  appId: "1:56634950796:web:6f25d4de0cbc19ccbb67a9",
+  measurementId: "G-XHFC80MGK9"
+};
+        // --- INITIALIZE FIREBASE AND FIRESTORE ---
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const postsCollection = db.collection('posts');
+
+        // --- GLOBAL VARIABLES ---
+        let allPosts = [];
+        let allAuthors = {};
+
+        // Helper to sanitize text (replace spaces/special chars)
+        const sanitize = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+        // --- CORE NAVIGATION FUNCTIONS ---
+        function showPage(pageId, event) {
+            if (event) event.preventDefault();
+            document.querySelectorAll('.page-content').forEach(page => page.style.display = 'none');
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) {
+                targetPage.style.display = 'block';
+                window.scrollTo(0, 0);
+            }
+            document.querySelectorAll('.navbar-nav .nav-link').forEach(link => link.classList.remove('active'));
+            if (pageId === 'home-page') {
+                document.getElementById('nav-home').classList.add('active');
+            }
+            // Bootstrap collapse মেনু বন্ধ করার জন্য (মোবাইলে কাজে লাগে)
+            const navbarCollapse = document.getElementById('navbarNav');
+            const bsCollapse = bootstrap.Collapse.getInstance(navbarCollapse);
+            if (bsCollapse) {
+                bsCollapse.hide();
+            }
+        }
+
+        // --- DYNAMIC RENDERING FUNCTIONS ---
+        function renderPostCard(post) {
+            const authorId = sanitize(post.author);
+            const postTitle = post.title || 'Untitled Post';
+            const postDate = post.date || 'Unknown Date';
+            const postAuthor = post.author || 'Unknown Author';
+            const postExcerpt = post.excerpt || 'No summary available.';
+            const postImage = post.image || 'https://via.placeholder.com/800x400?text=No+Image';
+            const postCategory = post.category || 'General';
+
+            return `
+                <article class="blog-post">
+                    <h1 class="post-title"><a data-post-id="${post.id}" onclick="showPostDetail(event)">${postTitle}</a></h1>
+                    <p class="post-meta">${postDate} by <a class="author-link" data-author-id="${authorId}" onclick="showAuthorPage(event, '${postAuthor}')">${postAuthor}</a></p>
+                    <a data-post-id="${post.id}" onclick="showPostDetail(event)"><img src="${postImage}" class="img-fluid rounded my-3" alt="${postTitle}"></a>
+                    <p class="post-excerpt">${postExcerpt}</p>
+                    <div class="category-tag"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#6c757d"><path d="M20 5h-9.586L8.707 3.293A.997.997 0 0 0 8 3H4c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V7c0-1.103-.897-2-2-2z"></path></svg><a href="#">${postCategory}</a></div>
+                </article>
+            `;
+        }
+
+        function renderRecentPostCard(post) {
+            const postTitle = post.title || 'Untitled Post';
+            const postImage = post.image || 'https://via.placeholder.com/400x250?text=No+Image';
+
+            return `
+                <div class="col-lg-4 col-md-6 mb-4 recent-post-item">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <a data-post-id="${post.id}" onclick="showPostDetail(event)">
+                            <img src="${postImage}" class="card-img-top" alt="${postTitle}" style="height: 150px; object-fit: cover;"> </a>
+                        <div class="card-body p-3">
+                            <h5 class="card-title" style="font-weight: 600; font-size: 1.1rem;"> <a data-post-id="${post.id}" onclick="showPostDetail(event)" class="text-dark text-decoration-none">${postTitle}</a>
+                            </h5>
+                            <p class="card-text"><small class="text-muted">${post.date || 'Unknown Date'}</small></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function loadHomePage() {
+            const postsContainer = document.getElementById('posts-container');
+            const recentPostsList = document.getElementById('recent-posts-list');
+            
+            if (allPosts.length === 0) {
+                postsContainer.innerHTML = '<div class="loading-indicator">No news posts found in the database.</div>';
+                recentPostsList.innerHTML = '<li class="text-muted">No recent posts.</li>';
+                return;
+            }
+
+            const postsHTML = allPosts.map(renderPostCard).join('');
+            const paginationHTML = `<nav><ul class="pagination"><li class="page-item active"><a class="page-link" href="#">1</a></li></ul></nav>`;
+            postsContainer.innerHTML = postsHTML + paginationHTML;
+            
+            recentPostsList.innerHTML = ''; 
+            allPosts.slice(0, 5).forEach(post => {
+                const postTitle = post.title || 'Untitled Post';
+                const postImage = post.image || 'https://via.placeholder.com/70x50?text=No+Img'; // 70x50 ব্যবহার করা হয়েছে
+                recentPostsList.innerHTML += `
+                    <li class="d-flex align-items-start mb-3 recent-post-item">
+                        <img src="${postImage}" alt="${postTitle}" class="me-3 rounded"> <div><a data-post-id="${post.id}" onclick="showPostDetail(event)">${postTitle.substring(0, 45)}${postTitle.length > 45 ? '...' : ''}</a></div>
+                    </li>
+                `;
+            });
+
+            showPage('home-page');
+        }
+
+
+        // Helper function to count paragraphs in the content
+        function countParagraphs(contentHTML) {
+            // Simple method: counting the number of closing </p> tags
+            const matches = contentHTML.match(/<\/p>/g);
+            return matches ? matches.length : 0;
+        }
+
+        // UPDATED: 'usedIds' প্যারামিটার যোগ করা হয়েছে
+        function generateAlsoReadBox(currentPostId, usedIds) {
+            // currentPostId এবং ইতিমধ্যে ব্যবহৃত postIds (usedIds) বাদ দিয়ে পোস্টগুলো ফিল্টার করা হলো
+            const availablePosts = allPosts.filter(p => p.id !== currentPostId && !usedIds.includes(p.id));
+            
+            if (availablePosts.length === 0) return { html: '', postId: null };
+            
+            // Randomly select one available post
+            const randomIndex = Math.floor(Math.random() * availablePosts.length);
+            const relatedPost = availablePosts[randomIndex];
+
+            const relatedTitle = relatedPost.title || 'Related Article';
+            const relatedImage = relatedPost.image || 'https://via.placeholder.com/70x50?text=Read+More';
+
+            const boxHTML = `
+                <div class="also-read-box">
+                    <span class="also-read-title">Also read</span>
+                    <div class="d-flex align-items-center">
+                        <img src="${relatedImage}" class="me-3 rounded" alt="Related Article">
+                        <a data-post-id="${relatedPost.id}" onclick="showPostDetail(event)">${relatedTitle}</a>
+                    </div>
+                </div>
+            `;
+            
+            // বক্স HTML এবং ব্যবহৃত পোস্টের আইডি ফেরত দেওয়া হলো
+            return { html: boxHTML, postId: relatedPost.id };
+        }
+
+
+        // 2. Load and display Post Detail Page (UPDATED FOR UNIQUE ALSO READ BOXES)
+        function showPostDetail(event) {
+            if (event) event.preventDefault();
+            const postId = event.currentTarget.getAttribute('data-post-id');
+            const post = allPosts.find(p => p.id === postId);
+
+            if (!post) return alert('Post not found!');
+            
+            const postContent = post.content || '<p>No content available for this post.</p>';
+            const postTitle = post.title || 'Untitled Post';
+            const postDate = post.date || 'Unknown Date';
+            const postAuthor = post.author || 'Unknown Author';
+            const postImage = post.image || 'https://via.placeholder.com/800x400?text=No+Image';
+            const postCategory = post.category || 'General';
+
+            // 1. Also Read Box Injection Logic
+            
+            // A. আর্টিকেলের প্যারাগ্রাফ সংখ্যা গণনা করো
+            const contentSegments = postContent.split('</p>').filter(s => s.trim() !== ''); // খালি সেগমেন্ট বাদ দেওয়া হলো
+            const totalParagraphs = contentSegments.length;
+
+            // B. প্যারাগ্রাফের সংখ্যার উপর ভিত্তি করে 'Also read' বক্সের সংখ্যা ঠিক করো:
+            let alsoReadCount = 0;
+            if (totalParagraphs >= 10) {
+                alsoReadCount = 4; // 10 বা তার বেশি প্যারাগ্রাফ: 4টি বক্স
+            } else if (totalParagraphs >= 7) {
+                alsoReadCount = 3; // 7-9 প্যারাগ্রাফ: 3টি বক্স
+            } else if (totalParagraphs >= 4) {
+                alsoReadCount = 2; // 4-6 প্যারাগ্রাফ: 2টি বক্স
+            } else if (totalParagraphs >= 2) {
+                alsoReadCount = 1; // 2-3 প্যারাগ্রাফ: 1টি বক্স
+            }
+            
+            // C. Also Read বক্স ইনজেক্ট করার জন্য ইনডেক্স ঠিক করো:
+            const injectionPoints = [];
+            if (alsoReadCount === 1) {
+                injectionPoints.push(Math.ceil(totalParagraphs / 2)); 
+            } else if (alsoReadCount === 2) {
+                injectionPoints.push(3);
+                injectionPoints.push(Math.ceil(totalParagraphs * 0.7)); 
+            } else if (alsoReadCount === 3) {
+                injectionPoints.push(2);
+                injectionPoints.push(Math.ceil(totalParagraphs / 2));
+                injectionPoints.push(Math.ceil(totalParagraphs * 0.8));
+            } else if (alsoReadCount === 4) {
+                injectionPoints.push(2);
+                injectionPoints.push(4);
+                injectionPoints.push(6);
+                injectionPoints.push(Math.ceil(totalParagraphs * 0.8));
+            }
+            
+            // D. Also Read বক্স ইনজেক্ট করো:
+            let finalContent = '';
+            let alsoReadIndex = 0;
+            // এটি ট্র্যাক করবে কোন পোস্ট আইডিগুলো 'Also Read' বক্সে ব্যবহার হয়েছে
+            const usedAlsoReadIds = []; 
+            
+            for (let i = 0; i < totalParagraphs; i++) {
+                finalContent += contentSegments[i] + '</p>';
+                
+                // যদি এই ইনডেক্সে Also read বক্স ঢোকানোর দরকার হয় এবং আমাদের কাছে যথেষ্ট পোস্ট থাকে
+                if (injectionPoints.includes(i + 1) && alsoReadIndex < alsoReadCount) {
+                    
+                    // generateAlsoReadBox-কে বর্তমানে ব্যবহৃত আইডিগুলো পাস করা হলো
+                    const alsoReadResult = generateAlsoReadBox(postId, usedAlsoReadIds); 
+
+                    if (alsoReadResult.postId) {
+                        finalContent += alsoReadResult.html;
+                        // নতুন ব্যবহৃত আইডি ট্র্যাক করা হলো
+                        usedAlsoReadIds.push(alsoReadResult.postId); 
+                        alsoReadIndex++;
+                    }
+                    // যদি আর কোনো পোস্ট বাকি না থাকে, তাহলে লুপ চালিয়ে যাও কিন্তু আর বক্স যোগ করো না
+                }
+            }
+            
+            // E. পোস্ট ডিটেইল HTML তৈরি
+            const detailHTML = `
+                <div class="row">
+                    <div class="col-lg-8 mx-auto">
+                        <article>
+                            <h1 class="single-post-title">${postTitle}</h1>
+                            <p class="post-meta">${postDate} by <a class="author-link" data-author-id="${sanitize(postAuthor)}" onclick="showAuthorPage(event, '${postAuthor}')">${postAuthor}</a></p>
+                            <p class="post-meta"><a href="#">${postCategory}</a></p>
+                            <img src="${postImage}" class="img-fluid rounded my-4" alt="${postTitle}">
+                            <div class="post-content-body">
+                                ${finalContent}
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('post-detail-content').innerHTML = detailHTML;
+            showPage('post-detail-page');
+
+
+            // 2. Inject Recent Posts Cards (3 cards excluding current post)
+            const recentPostsContainer = document.getElementById('recent-posts-cards');
+            const recentPosts = allPosts
+                .filter(p => p.id !== postId)
+                .slice(0, 3); 
+
+            let cardsHTML = '';
+            if (recentPosts.length > 0) {
+                cardsHTML = recentPosts.map(renderRecentPostCard).join('');
+            } else {
+                cardsHTML = '<div class="col-12 text-center text-muted py-3">No other posts found.</div>';
+            }
+            recentPostsContainer.innerHTML = cardsHTML;
+        }
+
+        function showAuthorPage(event, authorName) {
+            if (event) event.preventDefault();
+
+            const authorId = event.currentTarget.getAttribute('data-author-id');
+            const authorData = allAuthors[authorId] || {};
+            const author = {
+                name: authorName,
+                bio: authorData.bio || `Hello! I'm ${authorName}, a contributor to SecureFone.`,
+                avatar: authorData.avatar || 'https://via.placeholder.com/100?text=A'
+            };
+            
+            const authorPosts = allPosts.filter(p => sanitize(p.author) === authorId);
+            const authorBoxHTML = `<div class="author-box"><div class="author-avatar"><img src="${author.avatar}" alt="${author.name} Profile Photo"></div><div><h1 class="author-name">${author.name}</h1><p class="mb-0 text-secondary">${author.bio}</p></div></div>`;
+            const authorPostsHTML = authorPosts.map(renderPostCard).join('');
+
+            document.getElementById('author-box-content').innerHTML = authorBoxHTML;
+            document.getElementById('author-posts').innerHTML = authorPostsHTML;
+            showPage('author-page');
+        }
+
+        async function fetchPosts() {
+            try {
+                const snapshot = await postsCollection.orderBy('timestamp', 'desc').get();
+                allPosts = [];
+                allAuthors = {};
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const postId = doc.id;
+
+                    const post = {
+                        id: postId,
+                        ...data,
+                        author: data.author || 'Unknown Author',
+                        image: data.image || 'https://via.placeholder.com/800x400?text=No+Image',
+                        // Firebase timestamp-কে বাংলা ডেট ফরমেটে রূপান্তর করা
+                        date: data.date || new Date(data.timestamp?.toDate()).toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' })
+                    };
+                    allPosts.push(post);
+
+                    const authorId = sanitize(post.author);
+                    if (!allAuthors[authorId]) {
+                        allAuthors[authorId] = { name: post.author, bio: data.author_bio || '', avatar: data.author_avatar || 'https://via.placeholder.com/100?text=A' };
+                    }
+                });
+                loadHomePage();
+
+            } catch (error) {
+                console.error("Error fetching documents: ", error);
+                document.getElementById('posts-container').innerHTML = '<div class="loading-indicator text-danger">Failed to load news. Check your Firebase config.</div>';
+            }
+        }
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', fetchPosts);
+    </script>
+</body>
+</html>
